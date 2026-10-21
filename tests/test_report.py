@@ -89,7 +89,8 @@ def test_build_report_radar_defaults_soft_skills_to_100_when_none_present():
 def test_build_report_handles_empty_results_without_crashing():
     report = build_report([], RESUME_TEXT, graph_version="abc123")
     assert report["metrics"]["radar"]["wording_accuracy_pct"] == 100.0
-    assert report["score"]["coverage_pct"] == 100.0
+    assert report["score"]["coverage_pct"] is None
+    assert report["metrics"]["radar"]["required_skills_pct"] is None
 
 
 def test_get_graph_version_returns_a_git_hash_in_a_repo(tmp_path):

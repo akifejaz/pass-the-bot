@@ -34,7 +34,7 @@ const TRANSLATIONS = {
     errorBoth: "Bitte sowohl den Anzeigentext als auch eine Lebenslauf-Datei angeben.",
     errorUnreachable: "Backend nicht erreichbar. Läuft es gerade?",
     postingNotUnderstood:
-      "Wir konnten aus dieser Stellenanzeige keine klaren Anforderungen erkennen. Die Prozentzahl unten ist daher nicht aussagekräftig.",
+      "Wir konnten aus dieser Stellenanzeige keine Pflichtanforderungen erkennen, deshalb gibt es hier keinen Score. Füge am besten den vollständigen Text der Anzeige ein.",
     downloadFailed: "Der Bericht konnte nicht erstellt werden. Bitte versuche es erneut.",
     atsResultHeading: "ATS-Ergebnis",
     downloadReportBtn: "Herunterladen",
@@ -47,10 +47,12 @@ const TRANSLATIONS = {
     emptyMatched: "Noch nichts gefunden.",
     emptyNearMiss: "Keine Beinahe-Treffer.",
     emptyMissing: "Nichts fehlt: passt sehr gut.",
+    emptyMissingNoScore: "Keine Anforderungen erkannt.",
     foundLabel: (text) => `gefunden: "${text}"`,
     openMatchTooltip: "Ähnlichkeitsbasiert erkannt, nicht aus dem kuratierten Katalog",
     tipsHeading: "Bevor du diesen Lebenslauf abschickst",
     tipsEmpty: "Keine Änderungen nötig: dieser Lebenslauf deckt alles ab, was die Anzeige verlangt.",
+    tipsNoScore: "Ohne erkannte Anforderungen in der Anzeige gibt es noch nichts, womit wir deinen Lebenslauf vergleichen können.",
     tipFix: (found, alias, name) =>
       `Schreibe "${found}" als exakten Begriff "${alias}", damit es als ${name} erkannt wird.`,
     tipFixOpen: (name) =>
@@ -135,7 +137,7 @@ const TRANSLATIONS = {
     errorBoth: "Please provide both the job posting text and a resume file.",
     errorUnreachable: "Could not reach the backend. Is it running?",
     postingNotUnderstood:
-      "We couldn't identify any clear requirements in this job posting. The percentage below isn't meaningful as a result.",
+      "We couldn't identify any required skills in this job posting, so there is no score. Try pasting the full text of the posting.",
     downloadFailed: "Could not generate the report. Please try again.",
     atsResultHeading: "ATS Result",
     downloadReportBtn: "Download",
@@ -148,10 +150,12 @@ const TRANSLATIONS = {
     emptyMatched: "Nothing matched yet.",
     emptyNearMiss: "No near-misses found.",
     emptyMissing: "Nothing missing, great fit.",
+    emptyMissingNoScore: "No requirements recognized.",
     foundLabel: (text) => `found "${text}"`,
     openMatchTooltip: "Detected by similarity, not from the curated catalog",
     tipsHeading: "Before you submit this resume",
     tipsEmpty: "No changes needed: this resume covers everything the posting asks for.",
+    tipsNoScore: "Without recognized requirements in the posting there is nothing to compare your resume against yet.",
     tipFix: (found, alias, name) =>
       `Fix "${found}" to the exact term "${alias}" so it's recognized as ${name}.`,
     tipFixOpen: (name) =>
@@ -491,6 +495,15 @@ function stopGaugeLoadingAnimation() {
   gaugeCircle.classList.remove("gauge-loading");
 }
 
+// coverage_pct is null when the posting yielded no required skills: show an
+// empty grey gauge instead of a number, since "0 of 0" is not a 100% fit.
+function showEmptyGauge() {
+  stopGaugeLoadingAnimation();
+  gaugeCircle.setAttribute("stroke-dashoffset", GAUGE_CIRCUMFERENCE);
+  gaugeCircle.setAttribute("stroke", "#9ca3af");
+  gaugeText.textContent = "–";
+}
+
 function animateGaugeTo(pct) {
   stopGaugeLoadingAnimation();
   const offset = GAUGE_CIRCUMFERENCE * (1 - pct / 100);
@@ -621,12 +634,13 @@ function revealResultSections() {
 function renderResults(report, { scroll = true } = {}) {
   lastReport = report;
   const pct = report.score.coverage_pct;
-  animateGaugeTo(pct);
-
-  const postingUnderstood = !report.metrics || report.metrics.posting_understood !== false;
-  scoreSummary.textContent = postingUnderstood
-    ? t("scoreSummary")(pct, report.score.required_matched, report.score.required_total)
-    : `${t("postingNotUnderstood")} ${t("scoreSummary")(pct, report.score.required_matched, report.score.required_total)}`;
+  if (pct === null || pct === undefined) {
+    showEmptyGauge();
+    scoreSummary.textContent = t("postingNotUnderstood");
+  } else {
+    animateGaugeTo(pct);
+    scoreSummary.textContent = t("scoreSummary")(pct, report.score.required_matched, report.score.required_total);
+  }
 
   const matched = report.results.filter((r) => r.status === "MATCH");
   const nearMiss = report.results.filter((r) => r.status === "NEAR_MISS");
@@ -697,14 +711,15 @@ function renderResults(report, { scroll = true } = {}) {
 
   renderList(matchedList, matched, t("emptyMatched"));
   renderList(nearMissList, nearMiss, t("emptyNearMiss"));
-  renderList(missingList, missing, t("emptyMissing"));
+  const noScore = pct === null || pct === undefined;
+  renderList(missingList, missing, noScore ? t("emptyMissingNoScore") : t("emptyMissing"));
 
   const tips = buildTips(report);
   tipsList.innerHTML = "";
   if (tips.length === 0) {
     const li = document.createElement("li");
     li.className = "text-gray-400 italic";
-    li.textContent = t("tipsEmpty");
+    li.textContent = noScore ? t("tipsNoScore") : t("tipsEmpty");
     tipsList.appendChild(li);
   } else {
     for (const tip of tips) {
