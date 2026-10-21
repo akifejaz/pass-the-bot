@@ -1,0 +1,5 @@
+expected: [electrician, control_cabinet_building, circuit_diagrams, eplan, plc_programming, forklift_license, master_craftsman, maintenance_repair]
+forbidden: [python, devops]
+open_expected: ["htl elektrotechnik"]
+open_forbidden: ["mindestgehalt", "kantine"]
+soft_expected: []

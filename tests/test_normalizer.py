@@ -349,3 +349,79 @@ def test_values_and_success_measures_close_the_requirements_section():
 def test_french_requirement_heading_is_detected():
     posting = "Vos missions\n- Gérer les menus\nVotre profil\n- BTS diététique\n- Maîtrise d'Excel\nAvantages\n- Mutuelle\n"
     assert [r.phrase for r in extract_open_requirements(posting)] == ["BTS diététique", "Maîtrise d'Excel"]
+
+
+def test_short_plain_lines_under_a_heading_are_items_without_bullet_markers():
+    """Job boards like the Arbeitsagentur drop the bullet glyphs, so each
+    requirement arrives as a short plain line."""
+    text = (
+        "Ihr Profil:\n"
+        "Abgeschlossene kaufmännische Ausbildung\n"
+        "Gute Kenntnisse im MS Office-Paket\n"
+        "Sehr gute Deutschkenntnisse in Wort und Schrift\n"
+    )
+    result = extract_open_requirements(text)
+    assert [r.phrase for r in result] == [
+        "Abgeschlossene kaufmännische Ausbildung",
+        "Gute Kenntnisse im MS Office-Paket",
+        "Sehr gute Deutschkenntnisse in Wort und Schrift",
+    ]
+
+
+def test_plain_line_intro_ending_with_a_colon_is_not_an_item():
+    text = "Anforderungen\nDas solltest du mitbringen:\nErfahrung im Vertrieb\n"
+    result = extract_open_requirements(text)
+    assert [r.phrase for r in result] == ["Erfahrung im Vertrieb"]
+
+
+def test_promise_heading_closes_the_requirements_section():
+    text = (
+        "Ihr Profil:\n- Führerschein Klasse B\n"
+        "Unsere Versprechen an Dich\n- Fort- und Weiterbildungsmöglichkeiten\n"
+    )
+    result = extract_open_requirements(text)
+    assert [r.phrase for r in result] == ["Führerschein Klasse B"]
+
+
+def test_training_opportunities_are_a_benefit_but_required_training_is_not():
+    text = (
+        "Anforderungen\n- Weiterbildung im Wundmanagement von Vorteil\n"
+        "- Fort- und Weiterbildungsmöglichkeiten\n"
+    )
+    result = extract_open_requirements(text)
+    assert [r.phrase for r in result] == ["Weiterbildung im Wundmanagement von Vorteil"]
+
+
+CARE_ENTRIES = [
+    SkillEntry(
+        id="basic_care", category="hard_skills", display={"de": "Grundpflege"},
+        status="curated", added="2026-10-21", aliases=["Grundpflege"],
+    ),
+    SkillEntry(
+        id="treatment_care", category="hard_skills", display={"de": "Behandlungspflege"},
+        status="curated", added="2026-10-21", aliases=["Behandlungspflege"],
+    ),
+]
+
+
+def test_german_suspended_compound_matches_both_words():
+    """"Grund- und Behandlungspflege" means Grundpflege and Behandlungspflege,
+    but only the second word is written out."""
+    result = extract_discrete_keywords(
+        "Durchführung der Grund- und Behandlungspflege", CARE_ENTRIES
+    )
+    by_id = {r.id: r for r in result}
+    assert set(by_id) == {"basic_care", "treatment_care"}
+    assert by_id["basic_care"].matched_text == "Grund- und Behandlungspflege"
+
+
+def test_hyphen_inside_a_word_is_not_a_suspended_compound():
+    result = extract_discrete_keywords("Grund-Behandlungspflege", CARE_ENTRIES)
+    assert {r.id for r in result} == {"treatment_care"}
+
+
+def test_detect_language_tells_german_from_english():
+    from passthebot.normalizer import detect_language
+
+    assert detect_language("Du bringst eine kaufmännische Ausbildung und Erfahrung mit.") == "de"
+    assert detect_language("You bring a degree and experience with the tools.") == "en"

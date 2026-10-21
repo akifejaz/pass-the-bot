@@ -76,7 +76,8 @@ Skills live in `src/passthebot/data/skills/*.yaml`. The schema is described
 in section 4 ("Data model") of
 `docs/superpowers/specs/2026-09-14-matching-engine-design.md`.
 
-- Discrete skills (languages, tools, certifications, ...) are matched by
+- Discrete skills (programming languages, tools, certifications, spoken
+  languages, ...) are matched by
   their `aliases`.
 - Soft skills are matched by meaning, using `anchor_phrases` and an
   `embedding_threshold`.
@@ -86,7 +87,11 @@ in section 4 ("Data model") of
   rejects duplicate ids and aliases that collide with another skill.
 
 Skills outside tech (finance, marketing, healthcare, trades) and German or
-French terms are especially welcome.
+French terms are especially welcome. `tests/data/postings/` holds labelled
+example postings; `python3 scripts/measure_postings.py` shows how many of
+their skills are found, and `python3 scripts/measure_soft_skills.py` does the
+same for soft skills. Add a posting with a `.expected.yaml` file when you add
+skills for a new field (write it yourself, don't copy a real ad).
 
 ## Pull requests
 

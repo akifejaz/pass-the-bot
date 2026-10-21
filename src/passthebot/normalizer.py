@@ -36,6 +36,10 @@ OTHER_SECTION_HEADING_KEYWORDS: set[str] = {
     "deine vorteile", "warum wir", "nous offrons", "ce que nous offrons",
     "ce que l'on vous propose", "avantages", "pourquoi nous rejoindre",
     "à propos", "qui sommes-nous", "missions",
+    # added 2026-10-21 from non-tech postings (issue #7)
+    "versprechen", "das erwartet dich", "das erwartet sie", "was dich erwartet",
+    "was sie erwartet", "aufgabengebiet", "ihr aufgabengebiet", "dein aufgabengebiet",
+    "deine benefits", "ihre benefits", "zusatzleistungen",
 }
 
 # Bullet phrases that describe what the employer offers, not what the
@@ -57,12 +61,17 @@ _BENEFIT_PATTERNS = [
         r"\bmodernes? büro", r"\bflexible arbeitszeiten\b",
         r"\bmutuelle\b", r"\btickets? restaurant\b", r"\btitres? restaurant\b",
         r"\bsalaire\b", r"\bcongés\b", r"\brtt\b",
+        r"weiterbildungsmöglichkeit", r"\bsinnstiftend", r"\bfirmenwagen\b",
+        r"\bdienstwagen\b", r"\bdienstauto\b", r"\bfirmenfahrzeug\b",
+        r"\büberzahlung\b", r"\blearning budget\b", r"\btraining budget\b",
     )
 ]
 
 
 def _is_benefit_phrase(phrase: str) -> bool:
     return any(p.search(phrase) for p in _BENEFIT_PATTERNS)
+
+PLAIN_LINE_MAX_WORDS = 12
 
 _BULLET_PREFIX = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
 
@@ -86,12 +95,19 @@ def _normalize_heading_line(line: str) -> str:
 
 
 def _matches_keyword_set(normalized: str, keywords: set[str]) -> bool:
-    if not normalized or len(normalized.split()) > 6:
+    """Single-word keywords ("kenntnisse", "skills", "profil") also occur
+    inside ordinary requirement lines ("Gute Kenntnisse im MS Office-Paket"),
+    so they only count as a heading when the line is at most three words
+    long or starts with the keyword ("Anforderungen, die du mitbringst")."""
+    words = normalized.split()
+    if not normalized or len(words) > 6:
         return False
-    return any(
-        re.search(rf"(?<![a-zäöü]){re.escape(kw)}(?![a-zäöü])", normalized)
-        for kw in keywords
-    )
+    for kw in keywords:
+        if " " not in kw and len(words) > 3 and not normalized.startswith(kw):
+            continue
+        if re.search(rf"(?<![a-zäöü]){re.escape(kw)}(?![a-zäöü])", normalized):
+            return True
+    return False
 
 
 def _is_requirement_heading(line: str) -> bool:
@@ -161,7 +177,10 @@ def extract_open_requirements(posting_text: str) -> list[OpenRequirement]:
     comma-bearing line in the section body is processed this way (not
     just the first), so a section with multiple comma-list lines (e.g.
     "Python, SQL, Excel" followed by "Deutsch, Englisch") extracts items
-    from all of them.
+    from all of them. A bullet-less line that is not such a comma list
+    counts as one item when it is short and has no closing sentence
+    punctuation (_is_plain_line_item), because some job boards strip the
+    bullet glyphs and deliver each requirement as a plain line.
 
     Known V1 limitation: a requirements section written as ordinary
     prose sentences (no bullets, no comma anywhere in the body, or a
@@ -219,7 +238,24 @@ def extract_open_requirements(posting_text: str) -> list[OpenRequirement]:
                         for f in fragments
                         if not _is_benefit_phrase(f)
                     )
+                    continue
+            phrase = line.strip()
+            if _is_plain_line_item(phrase) and not _is_benefit_phrase(phrase):
+                requirements.append(OpenRequirement(phrase=phrase, source_line=idx))
     return requirements
+
+
+def _is_plain_line_item(line: str) -> bool:
+    """A short line with no bullet glyph that reads like a list item rather
+    than a sentence: at most PLAIN_LINE_MAX_WORDS words and no closing
+    sentence punctuation. Intro lines ("Das solltest du mitbringen:") end
+    with a colon and are skipped. Job boards that strip bullet glyphs
+    (e.g. the Arbeitsagentur) deliver requirements in exactly this shape."""
+    return (
+        bool(line)
+        and len(line.split()) <= PLAIN_LINE_MAX_WORDS
+        and not line.endswith((".", ":", "?", "!"))
+    )
 
 
 def extract_discrete_keywords(text: str, entries: list[SkillEntry]) -> list[ExtractedKeyword]:
@@ -251,6 +287,13 @@ def extract_discrete_keywords(text: str, entries: list[SkillEntry]) -> list[Extr
     skill it happens to contain as a substring.
     """
     normalized_text = normalize_string(text)
+    # Hidden words of German suspended compounds are appended after the text,
+    # each remembering the phrase it came from (reported as matched_text).
+    expansion_sources: list[tuple[int, str]] = []
+    for word, source in _suspended_compound_expansions(text):
+        normalized_text += " | "
+        expansion_sources.append((len(normalized_text), source))
+        normalized_text += normalize_string(word)
     claimed = [False] * len(normalized_text)
 
     pairs: list[tuple[str, str, SkillEntry]] = []
@@ -272,10 +315,30 @@ def extract_discrete_keywords(text: str, entries: list[SkillEntry]) -> list[Extr
             for i in range(start, end):
                 claimed[i] = True
             if entry.id not in found:
+                matched_text = next(
+                    (src for pos, src in reversed(expansion_sources) if start >= pos), alias
+                )
                 found[entry.id] = ExtractedKeyword(
-                    id=entry.id, category=entry.category, matched_text=alias, confidence=1.0
+                    id=entry.id, category=entry.category, matched_text=matched_text,
+                    confidence=1.0,
                 )
     return list(found.values())
+
+
+# "Grund- und Behandlungspflege": the first word drops the part it shares
+# with the second ("pflege"). The shared tail is unknown, so every tail of
+# at least MIN_SHARED_TAIL letters is tried; only real aliases ever match.
+_SUSPENDED_COMPOUND = re.compile(r"(\w+)-\s+(?:und|oder|bzw\.?|sowie|&)\s+(\w+)")
+MIN_SHARED_TAIL = 4
+
+
+def _suspended_compound_expansions(text: str) -> list[tuple[str, str]]:
+    expansions: list[tuple[str, str]] = []
+    for m in _SUSPENDED_COMPOUND.finditer(text):
+        head, full = m.group(1), m.group(2)
+        for cut in range(1, len(full) - MIN_SHARED_TAIL + 1):
+            expansions.append((head + full[cut:], m.group(0)))
+    return expansions
 
 
 def split_sentences(text: str) -> list[str]:
@@ -300,6 +363,45 @@ def split_sentences(text: str) -> list[str]:
     return [s.strip() for s in sentences if s.strip()]
 
 
+GERMAN_TEXT_MIN_THRESHOLD = 0.60
+
+_GERMAN_FUNCTION_WORDS = {
+    "und", "der", "die", "das", "mit", "für", "von", "im", "in", "eine", "ein",
+    "wir", "sie", "du", "ihr", "dein", "deine", "ihre", "unsere", "oder", "zu",
+}
+_ENGLISH_FUNCTION_WORDS = {
+    "and", "the", "with", "for", "of", "in", "a", "an", "we", "you", "your",
+    "our", "or", "to", "is", "are",
+}
+
+
+def detect_language(text: str) -> str:
+    """"de" or "en", by counting common function words. Good enough to pick
+    a soft-skill threshold; not a general language detector."""
+    words = re.findall(r"[a-zäöüß]+", text.lower())
+    german = sum(w in _GERMAN_FUNCTION_WORDS for w in words)
+    english = sum(w in _ENGLISH_FUNCTION_WORDS for w in words)
+    return "de" if german > english else "en"
+
+
+_LIST_SEPARATOR = re.compile(r"\s*(?:,|;|\bund\b|\band\b|\bsowie\b|&)\s*", re.IGNORECASE)
+LIST_ITEM_MAX_WORDS = 1
+
+
+def _short_list_items(sentence: str) -> list[str]:
+    """Items of an enumeration of single words ("Einfühlsam, zuverlässig und
+    teamfähig"), scored on their own as well: as one sentence, each item's
+    similarity is diluted by the others (0.54 instead of 1.0 for
+    "zuverlässig"). Multi-word items are left alone: generic shared words
+    ("Arbeitsweise", "skills") made "selbstständige Arbeitsweise" score 0.70
+    against "strukturierte Arbeitsweise"."""
+    items = [i.strip(" .-") for i in _LIST_SEPARATOR.split(sentence)]
+    items = [i for i in items if i]
+    if len(items) < 2 or any(len(i.split()) > LIST_ITEM_MAX_WORDS for i in items):
+        return []
+    return items
+
+
 def extract_soft_skills(
     text: str, entries: list[SkillEntry], embedder
 ) -> list[ExtractedKeyword]:
@@ -313,11 +415,17 @@ def extract_soft_skills(
     detect them reliably.
 
     An entry is included if the best-matching anchor phrase (across all
-    sentences) clears its own embedding_threshold.
+    sentences) clears its own embedding_threshold. On German text the
+    threshold is at least GERMAN_TEXT_MIN_THRESHOLD: the English model
+    scores unrelated German sentences around 0.50-0.60, while German anchor
+    phrases that really occur score 0.65 and up (measured on
+    tests/data/postings with scripts/measure_soft_skills.py, issue #7).
     """
     sentences = split_sentences(text)
     if not sentences:
         sentences = [text]
+    sentences = sentences + [f for s in sentences for f in _short_list_items(s)]
+    is_german = detect_language(text) == "de"
 
     found: list[ExtractedKeyword] = []
     for entry in entries:
@@ -330,6 +438,8 @@ def extract_soft_skills(
             if score > best_score:
                 best_phrase, best_score = phrase, score
         threshold = entry.embedding_threshold if entry.embedding_threshold is not None else 0.48
+        if is_german:
+            threshold = max(threshold, GERMAN_TEXT_MIN_THRESHOLD)
         if best_score >= threshold:
             found.append(
                 ExtractedKeyword(
