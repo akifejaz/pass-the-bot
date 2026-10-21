@@ -5,12 +5,12 @@ const TRANSLATIONS = {
   de: {
     pageTitle: "Pass The Bot! Sieh deinen Lebenslauf wie ein Bewerbermanagementsystem (ATS)",
     tagline: "Sieh deinen Lebenslauf so, wie ihn ein Bewerbermanagementsystem (ATS) sieht.",
-    desc1: 'Anzeige einfügen, Lebenslauf hochladen und sofort eine transparente Auswertung bekommen: welche geforderten Skills erkannt wurden, welche knapp danebenlagen (Tippfehler wie "Dockr" statt "Docker"), und welche wirklich fehlen.',
+    desc1: 'Anzeige oder Link einfügen, Lebenslauf hochladen und sofort eine transparente Auswertung bekommen: welche geforderten Skills erkannt wurden, welche knapp danebenlagen (Tippfehler wie "Dockr" statt "Docker"), und welche wirklich fehlen.',
     badgeFree: "Kostenlos",
     badgeNoAccount: "Kein Account",
     badgeOpenSource: "Open Source",
     labelPosting: "Stellenanzeige",
-    placeholderPosting: "Stellenanzeige hier einfügen...",
+    placeholderPosting: "Text der Stellenanzeige oder Link hier einfügen...",
     labelCv: "Dein Lebenslauf",
     fileHint: "Datei auswählen oder hineinziehen",
     fileTypes: "PDF oder DOCX (max. 5MB)",
@@ -20,10 +20,8 @@ const TRANSLATIONS = {
       { title: "Lebenslauf-Datei geöffnet", subtitle: "PDF oder DOCX wird eingelesen" },
       { title: "Text extrahiert", subtitle: "Rohtext aus der Datei gewonnen" },
       { title: "Anzeige gelesen", subtitle: "Text der Stellenanzeige übernommen" },
-      { title: "Skills in der Anzeige erkannt", subtitle: "Bekannte Begriffe aus dem Skill-Graph abgeglichen" },
-      { title: "Soft Skills in der Anzeige erkannt", subtitle: "Ähnlichkeitsvergleich per Embedding" },
-      { title: "Skills im Lebenslauf erkannt", subtitle: "Bekannte Begriffe aus dem Skill-Graph abgeglichen" },
-      { title: "Soft Skills im Lebenslauf erkannt", subtitle: "Ähnlichkeitsvergleich per Embedding" },
+      { title: "Skills der Anzeige erkannt", subtitle: "Fachbegriffe per Skill-Graph, Soft Skills per Embedding" },
+      { title: "Skills im Lebenslauf erkannt", subtitle: "Fachbegriffe per Skill-Graph, Soft Skills per Embedding" },
       { title: "Pflichtanforderungen erkannt", subtitle: 'Signalwörter wie "erforderlich" oder "must have" gesucht' },
       { title: "Wunschkenntnisse erkannt", subtitle: 'Signalwörter wie "von Vorteil" oder "nice to have" gesucht' },
       { title: "Direkter Abgleich", subtitle: "Skill-IDs aus Anzeige und Lebenslauf verglichen" },
@@ -32,6 +30,12 @@ const TRANSLATIONS = {
       { title: "Ergebnis aufbereitet", subtitle: "Bericht für die Anzeige vorbereitet" },
     ],
     errorBoth: "Bitte sowohl den Anzeigentext als auch eine Lebenslauf-Datei angeben.",
+    linkProgressStep: { title: "Link geöffnet", subtitle: "Stellenanzeige aus der Seite ausgelesen" },
+    sourceReadFrom: (host) => `Gelesen von ${host}`,
+    sourceMeta: (chars, method) => `${chars.toLocaleString("de-AT")} Zeichen · ${method}`,
+    sourceMethods: { jsonld: "JobPosting-Daten", app_state: "Seitendaten", page_text: "Seitentext" },
+    sourceOpen: "Original öffnen",
+    sourceHint: "Der gelesene Text steht jetzt im Eingabefeld. Du kannst ihn prüfen und anpassen.",
     errorUnreachable: "Backend nicht erreichbar. Läuft es gerade?",
     postingNotUnderstood:
       "Wir konnten aus dieser Stellenanzeige keine Pflichtanforderungen erkennen, deshalb gibt es hier keinen Score. Füge am besten den vollständigen Text der Anzeige ein.",
@@ -104,16 +108,17 @@ const TRANSLATIONS = {
     radarWordingAccuracy: "Formulierungsgenauigkeit",
     radarReadability: "Lesbarkeit",
     radarSectionCompleteness: "Abschnitts-Vollständigkeit",
+    radarEmpty: "Das Radar braucht erkannte Anforderungen aus der Anzeige. Ohne sie gibt es nichts zu vergleichen.",
   },
   en: {
     pageTitle: "Pass The Bot! See your CV the way an Applicant Tracking System (ATS) sees it",
     tagline: "See your resume the way an Applicant Tracking System (ATS) sees it.",
-    desc1: 'Paste a job posting, upload your CV, and get an instant, transparent breakdown: which required skills matched, which were near-misses caught by typos or phrasing (like "Dockr" vs "Docker"), and which are genuinely missing.',
+    desc1: 'Paste a job posting or its link, upload your CV, and get an instant, transparent breakdown: which required skills matched, which were near-misses caught by typos or phrasing (like "Dockr" vs "Docker"), and which are genuinely missing.',
     badgeFree: "Free",
     badgeNoAccount: "No account",
     badgeOpenSource: "Open source",
     labelPosting: "Job posting",
-    placeholderPosting: "Paste the job description here...",
+    placeholderPosting: "Paste the job description or a link to it here...",
     labelCv: "Your CV",
     fileHint: "Choose a file or drag and drop",
     fileTypes: "PDF or DOCX (max 5MB)",
@@ -123,10 +128,8 @@ const TRANSLATIONS = {
       { title: "Resume file opened", subtitle: "Reading the PDF or DOCX" },
       { title: "Text extracted", subtitle: "Raw text pulled from the file" },
       { title: "Job posting read", subtitle: "Posting text loaded" },
-      { title: "Skills detected in the posting", subtitle: "Matched against the skill graph" },
-      { title: "Soft skills detected in the posting", subtitle: "Compared by embedding similarity" },
-      { title: "Skills detected in your resume", subtitle: "Matched against the skill graph" },
-      { title: "Soft skills detected in your resume", subtitle: "Compared by embedding similarity" },
+      { title: "Skills detected in the posting", subtitle: "Hard skills via the skill graph, soft skills via embeddings" },
+      { title: "Skills detected in your resume", subtitle: "Hard skills via the skill graph, soft skills via embeddings" },
       { title: "Required skills identified", subtitle: 'Signal phrases like "required" or "must have"' },
       { title: "Nice-to-haves identified", subtitle: 'Signal phrases like "nice to have" or "a plus"' },
       { title: "Direct matching", subtitle: "Skill IDs from posting and resume compared" },
@@ -135,6 +138,12 @@ const TRANSLATIONS = {
       { title: "Report assembled", subtitle: "Result prepared for display" },
     ],
     errorBoth: "Please provide both the job posting text and a resume file.",
+    linkProgressStep: { title: "Link opened", subtitle: "Job posting read from the page" },
+    sourceReadFrom: (host) => `Read from ${host}`,
+    sourceMeta: (chars, method) => `${chars.toLocaleString("en-US")} characters · ${method}`,
+    sourceMethods: { jsonld: "JobPosting data", app_state: "page data", page_text: "page text" },
+    sourceOpen: "Open original",
+    sourceHint: "The text we read is now in the input field, so you can check and edit it.",
     errorUnreachable: "Could not reach the backend. Is it running?",
     postingNotUnderstood:
       "We couldn't identify any required skills in this job posting, so there is no score. Try pasting the full text of the posting.",
@@ -207,6 +216,7 @@ const TRANSLATIONS = {
     radarWordingAccuracy: "Wording Accuracy",
     radarReadability: "Readability",
     radarSectionCompleteness: "Section Completeness",
+    radarEmpty: "The radar needs recognized requirements from the posting. Without them there is nothing to compare.",
   },
 };
 
@@ -337,6 +347,34 @@ document.addEventListener("keydown", (event) => {
 
 const postingTextarea = document.getElementById("posting_text");
 const postingPlaceholder = document.getElementById("posting-placeholder");
+
+// Same rule as the backend's looks_like_url: the whole field is one link.
+function isSingleLink(text) {
+  return /^https?:\/\/\S+$/i.test(text.trim());
+}
+
+const postingSourceCard = document.getElementById("posting-source-card");
+
+// Every value here comes from a third-party page, so it is only ever set
+// via textContent / a validated href, never innerHTML.
+function renderPostingSource(source) {
+  if (!source) {
+    postingSourceCard.classList.add("hidden");
+    return;
+  }
+  document.getElementById("posting-source-label").textContent = t("sourceReadFrom")(source.host);
+  document.getElementById("posting-source-title").textContent =
+    [source.title, source.company].filter(Boolean).join(" · ");
+  document.getElementById("posting-source-meta").textContent = t("sourceMeta")(
+    source.chars,
+    t("sourceMethods")[source.method] || source.method
+  );
+  const link = document.getElementById("posting-source-link");
+  link.textContent = t("sourceOpen");
+  link.href = isSingleLink(source.url) ? source.url : "#";
+  document.getElementById("posting-source-hint").textContent = t("sourceHint");
+  postingSourceCard.classList.remove("hidden");
+}
 
 function syncPostingPlaceholder() {
   postingPlaceholder.classList.toggle("hidden", postingTextarea.value.length > 0);
@@ -537,6 +575,13 @@ function radarValueColor(pct) {
 
 function renderRadar(radar) {
   const axes = RADAR_AXES.filter((a) => radar[a.key] !== null && radar[a.key] !== undefined);
+  // Fewer than three axes don't form a polygon (two make a line): this
+  // happens when the posting yielded nothing and only the resume-only axes
+  // (readability, section completeness) remain.
+  const tooFewAxes = axes.length < 3;
+  document.getElementById("radar-empty").classList.toggle("hidden", !tooFewAxes);
+  document.getElementById("radar-container").classList.toggle("hidden", tooFewAxes);
+  if (tooFewAxes) return;
   const centerX = 115;
   const centerY = 115;
   const maxRadius = 62;
@@ -623,16 +668,60 @@ function renderRadar(radar) {
   });
 }
 
+// Back to the empty skeleton. Called before every run, so a failed run
+// (unreadable link, network error) never leaves the previous job's score,
+// radar and section analysis standing under the new error message.
+function clearResults() {
+  lastReport = null;
+  renderPostingSource(null);
+  resultsCard.classList.add("opacity-40");
+  stopGaugeLoadingAnimation();
+  gaugeCircle.setAttribute("stroke-dashoffset", GAUGE_CIRCUMFERENCE);
+  gaugeCircle.setAttribute("stroke", "#16a34a");
+  gaugeText.textContent = "·";
+  scoreSummary.textContent = t("scorePrompt");
+  [countMatched, countNearMiss, countMissing].forEach((el) => (el.textContent = "0"));
+  [matchedList, nearMissList, missingList, sectionAnalysisList, tipsList].forEach((el) => (el.innerHTML = ""));
+  [exactMatchCount, semanticMatchCount, openMatchCount, totalKeywordCount].forEach((el) => (el.textContent = ""));
+  [exactMatchBar, semanticMatchBar, openMatchBar].forEach((el) => (el.style.width = "0%"));
+  openMatchRow.classList.add("hidden");
+  [radarRingsEl, radarSpokesEl, radarDotsEl, radarLabelsEl].forEach((el) => (el.innerHTML = ""));
+  radarPolygon.setAttribute("points", "");
+  document.getElementById("radar-empty").classList.add("hidden");
+  document.getElementById("radar-container").classList.remove("hidden");
+  downloadReportBtn.classList.add("hidden");
+  downloadReportBtn.classList.remove("flex");
+}
+
+// Result blocks fade in as they scroll into view instead of all at once on
+// a timer, so the ones below the fold still have an entrance when reached.
+const sectionObserver =
+  "IntersectionObserver" in window
+    ? new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add("revealed");
+            sectionObserver.unobserve(entry.target);
+          });
+        },
+        { threshold: 0.15 }
+      )
+    : null;
+
 function revealResultSections() {
   const sections = resultsCard.querySelectorAll("[data-reveal]");
-  sections.forEach((el) => el.classList.remove("revealed"));
   sections.forEach((el, i) => {
-    setTimeout(() => el.classList.add("revealed"), i * 130);
+    el.classList.remove("revealed");
+    el.style.transitionDelay = `${Math.min(i, 3) * 110}ms`;
+    if (sectionObserver) sectionObserver.observe(el);
+    else el.classList.add("revealed");
   });
 }
 
 function renderResults(report, { scroll = true } = {}) {
   lastReport = report;
+  renderPostingSource(report.posting_source);
   const pct = report.score.coverage_pct;
   if (pct === null || pct === undefined) {
     showEmptyGauge();
@@ -770,11 +859,16 @@ form.addEventListener("submit", async (event) => {
   submitBtnLabel.textContent = t("analyzing");
   submitBtnDots.classList.remove("hidden");
   progressWrap.classList.remove("hidden");
+  clearResults();
   gaugeText.textContent = "…";
   startGaugeLoadingAnimation();
 
   let groupIndex = 0;
-  const steps = t("progressSteps");
+  const postingIsLink = isSingleLink(postingText);
+  // A link replaces the "posting read" step in place, so the pairs below
+  // stay aligned (posting + its skills, resume skills + requirements, ...).
+  const steps = [...t("progressSteps")];
+  if (postingIsLink) steps[2] = t("linkProgressStep");
 
   function chunk(array, size) {
     const chunks = [];
@@ -857,6 +951,7 @@ form.addEventListener("submit", async (event) => {
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
+      clearResults();
       showError(body.detail || `Request failed (${response.status}).`);
       return;
     }
@@ -868,8 +963,16 @@ form.addEventListener("submit", async (event) => {
       await new Promise((resolve) => setTimeout(resolve, MIN_ANIMATE_MS - elapsed));
     }
 
+    // Swap the link for the text that was actually analyzed, so the user
+    // can see and edit it, and a re-run doesn't fetch the page again.
+    if (report.posting_source && report.posting_source.text) {
+      postingTextarea.value = report.posting_source.text;
+      syncPostingPlaceholder();
+    }
+
     renderResults(report);
   } catch (err) {
+    clearResults();
     showError(t("errorUnreachable"));
   } finally {
     clearInterval(stepInterval);
@@ -907,6 +1010,9 @@ downloadReportBtn.addEventListener("click", () => {
   // default for this one call.
   const { scrollX, scrollY } = window;
   window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  // Blocks not yet scrolled into view are still transparent; reveal them
+  // so the PDF never contains empty cards.
+  resultsCard.querySelectorAll("[data-reveal]").forEach((el) => el.classList.add("revealed"));
 
   // The button lives inside the captured element; hide it for the snapshot
   // so it doesn't show up inside the exported PDF, then restore it.
@@ -950,6 +1056,24 @@ downloadReportBtn.addEventListener("click", () => {
 });
 
 applyStaticTranslations();
+
+const scrollRevealObserver =
+  "IntersectionObserver" in window
+    ? new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            entry.target.classList.add("in-view");
+            scrollRevealObserver.unobserve(entry.target);
+          });
+        },
+        { threshold: 0.1 }
+      )
+    : null;
+document.querySelectorAll("[data-scroll-reveal]").forEach((el) => {
+  if (scrollRevealObserver) scrollRevealObserver.observe(el);
+  else el.classList.add("in-view");
+});
 
 // Friendly fade/slide-in welcome on first paint, staggered so the icon
 // settles in a beat after the text instead of both popping in at once.
