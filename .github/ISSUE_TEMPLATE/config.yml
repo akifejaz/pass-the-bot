@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Try Pass The Bot
+    url: https://rfi-irfos.github.io/pass-the-bot/
+    about: The live tool. Free, no account, nothing stored.
+  - name: Report a security issue
+    url: mailto:security@rfi-irfos.com
+    about: Please email security problems instead of opening a public issue.

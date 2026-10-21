@@ -1,0 +1,38 @@
+name: Bug report
+description: Something gives a wrong result or doesn't work
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please **don't attach your real resume**. Describe it, or use a made-up one.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what did you see instead?
+    validations:
+      required: true
+  - type: textarea
+    id: posting
+    attributes:
+      label: Job posting
+      description: A link to the posting, or the relevant part of its text.
+  - type: dropdown
+    id: device
+    attributes:
+      label: Where did it happen?
+      options:
+        - Desktop browser
+        - Phone or tablet
+        - Running locally
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and language
+      placeholder: e.g. Chrome 130, German UI
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Optional. You can paste an image here.
