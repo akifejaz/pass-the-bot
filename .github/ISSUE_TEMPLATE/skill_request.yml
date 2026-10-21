@@ -1,0 +1,31 @@
+name: Missing or wrong skill
+description: A skill wasn't recognized, or something was wrongly read as a skill
+labels: ["enhancement", "good first issue"]
+body:
+  - type: input
+    id: skill
+    attributes:
+      label: Skill or phrase
+      placeholder: e.g. "Financial modelling", "Kommunikationsstärke", "SAP S/4HANA"
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What's wrong?
+      options:
+        - Not recognized at all
+        - Recognized in the posting but not in my resume (or the other way round)
+        - Something that isn't a skill was treated as one
+    validations:
+      required: true
+  - type: textarea
+    id: aliases
+    attributes:
+      label: Other spellings or translations
+      description: Abbreviations, German or French terms, common typos.
+  - type: input
+    id: field
+    attributes:
+      label: Job field
+      placeholder: e.g. finance, marketing, healthcare, software
