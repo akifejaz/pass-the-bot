@@ -12,6 +12,12 @@ REQUIREMENT_HEADING_KEYWORDS: set[str] = {
     "voraussetzungen", "must-have", "must haves", "nice-to-have",
     "requirements", "qualifications", "what you'll need",
     "what we're looking for", "your profile",
+    # added 2026-10-21 from postings read via pasted links (issue #4)
+    "what you need", "who you are", "about you", "you bring", "you have",
+    "mandatory experience", "essential", "desirable", "strongly preferred",
+    "hard skills", "how you work", "skills", "du bringst mit", "das bringst du mit",
+    "sie bringen mit", "dein profil", "kenntnisse", "compétences", "prérequis",
+    "votre profil",
 }
 
 OTHER_SECTION_HEADING_KEYWORDS: set[str] = {
@@ -19,7 +25,44 @@ OTHER_SECTION_HEADING_KEYWORDS: set[str] = {
     "benefits", "perks", "vorteile", "das bieten wir", "unser angebot",
     "über uns", "about us", "kontakt", "contact", "bewerbung",
     "how to apply", "jetzt bewerben",
+    # added 2026-10-21: benefits/values/KPI/responsibility sections whose
+    # bullets bled into a preceding requirements section (a LinkedIn user
+    # was told to prove "Modern office space in Munich")
+    "what you get", "our offer", "why join", "why us", "what's in it for you",
+    "life at", "working at", "our values", "values", "success measures",
+    "how success", "what success looks like", "kpis", "equal employment",
+    "about the role", "about the company", "responsibilities", "what you will do",
+    "what you'll do", "your role", "deine aufgaben", "ihre aufgaben", "aufgaben",
+    "deine vorteile", "warum wir", "nous offrons", "ce que nous offrons",
+    "ce que l'on vous propose", "avantages", "pourquoi nous rejoindre",
+    "à propos", "qui sommes-nous", "missions",
 }
+
+# Bullet phrases that describe what the employer offers, not what the
+# candidate needs. Dropped from open requirements even when their section
+# heading is an as-yet-unknown phrasing that doesn't close the section.
+# Deliberately specific (e.g. "office space", not "office", which would
+# also drop "Microsoft Office").
+_BENEFIT_PATTERNS = [
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"\boffice (?:space|location)s?\b", r"\bmodern (?:office|workplace)s?\b",
+        r"\bsalary\b", r"\bcompensation\b", r"\bvacation\b", r"\bpaid time off\b",
+        r"\bparental leave\b", r"\bhealth insurance\b", r"\bpension\b",
+        r"\bstock options?\b", r"\bgym\b", r"\bfitness\b", r"\bteam events?\b",
+        r"\bfree (?:lunch|drinks|snacks|coffee|fruit)\b",
+        r"\bflexible (?:working|work|hours)\b",
+        r"\bgehalt\b", r"\bvergütung\b", r"\burlaub", r"\bjobticket\b", r"\bjobrad\b",
+        r"\baltersvorsorge\b", r"\bteamevents?\b", r"\bfirmenevents?\b",
+        r"\bmodernes? büro", r"\bflexible arbeitszeiten\b",
+        r"\bmutuelle\b", r"\btickets? restaurant\b", r"\btitres? restaurant\b",
+        r"\bsalaire\b", r"\bcongés\b", r"\brtt\b",
+    )
+]
+
+
+def _is_benefit_phrase(phrase: str) -> bool:
+    return any(p.search(phrase) for p in _BENEFIT_PATTERNS)
 
 _BULLET_PREFIX = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
 
@@ -133,7 +176,11 @@ def extract_open_requirements(posting_text: str) -> list[OpenRequirement]:
     recognized as a boundary and its bullets could bleed into a
     preceding requirements section -- this keyword set, like
     REQUIREMENT_HEADING_KEYWORDS, is expected to grow as new postings
-    surface new phrasings.
+    surface new phrasings. Bullets that clearly describe an employer
+    benefit (_BENEFIT_PATTERNS, e.g. "office space", "Gehalt", "mutuelle")
+    are dropped regardless of section, as a second line of defence for
+    exactly that case; the pattern list is a first plausible pass, like the
+    heading sets, not a validated classifier.
     """
     lines = posting_text.splitlines()
     heading_indices = [idx for idx, line in enumerate(lines) if _is_requirement_heading(line)]
@@ -158,7 +205,7 @@ def extract_open_requirements(posting_text: str) -> list[OpenRequirement]:
             requirements.extend(
                 OpenRequirement(phrase=phrase, source_line=idx)
                 for idx, phrase in bullet_items
-                if phrase
+                if phrase and not _is_benefit_phrase(phrase)
             )
             continue
 
@@ -168,7 +215,9 @@ def extract_open_requirements(posting_text: str) -> list[OpenRequirement]:
                 fragments = [f for f in fragments if f]
                 if fragments and all(len(f.split()) <= 8 for f in fragments):
                     requirements.extend(
-                        OpenRequirement(phrase=f, source_line=idx) for f in fragments
+                        OpenRequirement(phrase=f, source_line=idx)
+                        for f in fragments
+                        if not _is_benefit_phrase(f)
                     )
     return requirements
 

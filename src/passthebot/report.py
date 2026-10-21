@@ -59,16 +59,24 @@ def _build_radar(
     sections: list[SectionResult],
 ) -> dict:
     """Assemble the 5-axis radar from values already computed elsewhere.
-    Every axis is a plain percentage a user could recompute by hand."""
+    Every axis is a plain percentage a user could recompute by hand.
+
+    required_skills_pct is None (not 100.0) when the posting yielded no
+    required skills at all, for the same reason as coverage_pct in
+    build_report: "0 of 0 matched" is not a perfect fit. The same holds
+    for the other posting-dependent axes when the posting yielded nothing
+    at all: soft_skills_pct and wording_accuracy_pct are None then, instead
+    of a 100% radar for a posting the engine couldn't read. Readability and
+    section completeness depend on the resume only and are always set."""
     required_skills_pct = (
-        round(100.0 * required_matched / required_total, 1) if required_total else 100.0
+        round(100.0 * required_matched / required_total, 1) if required_total else None
     )
 
     soft_skill_results = [r for r in results if r.category == "soft_skills"]
     soft_skills_pct = (
         round(100.0 * sum(1 for r in soft_skill_results if r.status == "MATCH") / len(soft_skill_results), 1)
         if soft_skill_results
-        else 100.0
+        else (100.0 if results else None)
     )
 
     curated_results = [r for r in results if r.origin != "open"]
@@ -76,7 +84,7 @@ def _build_radar(
     wording_accuracy_pct = (
         round(100.0 - 100.0 * near_miss_count / len(curated_results), 1)
         if curated_results
-        else 100.0
+        else None
     )
 
     filled_sections = sum(1 for s in sections if s.filled)
@@ -103,8 +111,11 @@ def build_report(
     required_results = [r for r in results if r.required]
     required_total = len(required_results)
     required_matched = sum(1 for r in required_results if r.status == "MATCH")
+    # None, not 100.0, when nothing required was found: an empty posting
+    # (or a pasted link the backend couldn't read) used to come back as a
+    # perfect 100% match for every resume (GitHub issue #4).
     coverage_pct = (
-        round(100.0 * required_matched / required_total, 1) if required_total else 100.0
+        round(100.0 * required_matched / required_total, 1) if required_total else None
     )
 
     readability = compute_readability(resume_text)

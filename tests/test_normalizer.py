@@ -313,3 +313,39 @@ def test_benefits_heading_directly_after_an_empty_requirements_heading_is_still_
     text = "Anforderungen\nWir bieten\n- Firmenwagen\n- Obst\n"
     result = extract_open_requirements(text)
     assert result == []
+
+
+def test_benefits_under_unknown_heading_are_not_requirements():
+    """LinkedIn feedback 2026-10-21: a user was told to prove the "skill"
+    "Modern office space in Munich enabling collaborative work" because the
+    benefits heading wasn't a known section boundary."""
+    posting = (
+        "Your profile\n"
+        "- 5+ years of Java development\n"
+        "- Experience with Kubernetes\n"
+        "Why you'll love it here\n"
+        "- Modern office space in Munich enabling collaborative work\n"
+        "- 30 days of vacation\n"
+        "- Competitive salary and stock options\n"
+    )
+    phrases = [r.phrase for r in extract_open_requirements(posting)]
+    assert phrases == ["5+ years of Java development", "Experience with Kubernetes"]
+
+
+def test_microsoft_office_is_still_a_requirement():
+    phrases = [r.phrase for r in extract_open_requirements("Requirements\n- Microsoft Office\n")]
+    assert phrases == ["Microsoft Office"]
+
+
+def test_values_and_success_measures_close_the_requirements_section():
+    posting = (
+        "Requirements\n- B2B marketing experience\n"
+        "Success Measures\n- Pipeline generated in APAC\n"
+        "Our Values\n- We work together\n"
+    )
+    assert [r.phrase for r in extract_open_requirements(posting)] == ["B2B marketing experience"]
+
+
+def test_french_requirement_heading_is_detected():
+    posting = "Vos missions\n- Gérer les menus\nVotre profil\n- BTS diététique\n- Maîtrise d'Excel\nAvantages\n- Mutuelle\n"
+    assert [r.phrase for r in extract_open_requirements(posting)] == ["BTS diététique", "Maîtrise d'Excel"]

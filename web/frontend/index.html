@@ -84,6 +84,49 @@
     transform: translateY(14px) scale(0.94) rotateY(0deg);
   }
   #hero-icon.revealed { transform: translateY(0) scale(1) rotateY(1080deg); }
+  /* App card: layered shadow so the widget lifts off the busy background. */
+  .app-card {
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.06),
+      0 12px 24px -8px rgba(15, 23, 42, 0.14),
+      0 40px 80px -24px rgba(15, 23, 42, 0.32);
+    transition: box-shadow 0.4s ease;
+  }
+  .app-card:focus-within {
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.06),
+      0 16px 32px -8px rgba(15, 23, 42, 0.18),
+      0 48px 96px -24px rgba(21, 128, 61, 0.35);
+  }
+
+  /* Scroll reveal: blocks rise in once when they enter the viewport. */
+  [data-scroll-reveal] {
+    opacity: 0;
+    transform: translateY(28px) scale(0.985);
+    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-scroll-reveal].in-view { opacity: 1; transform: none; }
+
+  /* Small feedback on things you can touch. */
+  #results-card section { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+  #results-card section:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.25); }
+  #submit-btn { transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease; }
+  #submit-btn:hover:not(:disabled) { box-shadow: 0 10px 24px -10px rgba(21, 128, 61, 0.7); }
+  #submit-btn:active:not(:disabled) { transform: scale(0.985); }
+  .drop-zone { transition: border-color 0.2s ease, background-color 0.2s ease; }
+  .drop-zone:hover { border-color: #16a34a; background-color: #f0fdf4; }
+  .badge-pill { transition: transform 0.2s ease; }
+  .badge-pill:hover { transform: translateY(-2px); }
+
+  @keyframes fade-slide-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  #progress-wrap:not(.hidden), #error-box:not(.hidden), #posting-source-card:not(.hidden) {
+    animation: fade-slide-in 0.35s ease both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    [data-scroll-reveal], [data-reveal] { opacity: 1 !important; transform: none !important; }
+  }
 </style>
 </head>
 <body class="text-gray-900 min-h-screen">
@@ -111,17 +154,17 @@
           </h1>
           <p class="text-xl font-semibold mb-4" data-i18n="tagline"></p>
           <p class="text-gray-500 max-w-md mb-8" data-i18n="desc1"></p>
-          <div class="flex flex-wrap justify-start gap-2 text-sm">
-            <span class="badge-pill bg-white border-2 border-green-600 text-green-700 rounded-full pl-2.5 pr-4 py-1.5 inline-flex items-center gap-1.5 font-medium whitespace-nowrap shadow-md">
-              <svg width="16" height="16" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#15803d"></circle><path d="M5 9.5 L7.5 12 L13 6" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+          <div class="flex flex-wrap justify-start gap-1 sm:gap-2 text-[11px] sm:text-sm">
+            <span class="badge-pill bg-white border-2 border-green-600 text-green-700 rounded-full px-2 py-1 sm:pl-2.5 sm:pr-4 sm:py-1.5 inline-flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap shadow-md">
+              <svg class="w-3 h-3 sm:w-4 sm:h-4 shrink-0" width="16" height="16" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#15803d"></circle><path d="M5 9.5 L7.5 12 L13 6" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
               <span data-i18n="badgeFree"></span>
             </span>
-            <span class="badge-pill bg-white border-2 border-blue-600 text-blue-700 rounded-full pl-2.5 pr-4 py-1.5 inline-flex items-center gap-1.5 font-medium whitespace-nowrap shadow-md">
-              <svg width="16" height="16" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#15803d"></circle><path d="M5 9.5 L7.5 12 L13 6" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span class="badge-pill bg-white border-2 border-blue-600 text-blue-700 rounded-full px-2 py-1 sm:pl-2.5 sm:pr-4 sm:py-1.5 inline-flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap shadow-md">
+              <svg class="w-3 h-3 sm:w-4 sm:h-4 shrink-0" width="16" height="16" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#15803d"></circle><path d="M5 9.5 L7.5 12 L13 6" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
               <span data-i18n="badgeNoAccount"></span>
             </span>
-            <span class="badge-pill bg-white border-2 border-orange-500 text-orange-600 rounded-full pl-2.5 pr-4 py-1.5 inline-flex items-center gap-1.5 font-medium whitespace-nowrap shadow-md">
-              <svg width="16" height="16" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#15803d"></circle><path d="M5 9.5 L7.5 12 L13 6" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+            <span class="badge-pill bg-white border-2 border-orange-500 text-orange-600 rounded-full px-2 py-1 sm:pl-2.5 sm:pr-4 sm:py-1.5 inline-flex items-center gap-1 sm:gap-1.5 font-medium whitespace-nowrap shadow-md">
+              <svg class="w-3 h-3 sm:w-4 sm:h-4 shrink-0" width="16" height="16" viewBox="0 0 18 18"><circle cx="9" cy="9" r="9" fill="#15803d"></circle><path d="M5 9.5 L7.5 12 L13 6" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg>
               <span data-i18n="badgeOpenSource"></span>
             </span>
           </div>
@@ -158,7 +201,7 @@
     <main class="relative w-full max-w-4xl mx-auto px-6 py-12">
 
     <!-- Single expanding app card: form on top, results grow in below -->
-    <div class="relative bg-white border border-gray-200 rounded-2xl shadow-xl mb-8 overflow-hidden">
+    <div class="app-card relative bg-white border border-gray-200 rounded-2xl mb-8 overflow-hidden" data-scroll-reveal>
     <button type="button" id="info-btn" aria-label="What is an ATS?"
       class="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-amber-50 border border-amber-200 shadow-lg flex items-center justify-center text-amber-500 hover:text-amber-600 hover:bg-amber-100 transition">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -181,7 +224,7 @@
 
         <div>
           <label for="resume_file" class="block text-center text-lg font-semibold mb-3" data-i18n="labelCv"></label>
-          <div class="relative border-2 border-dashed border-gray-300 rounded-lg h-32 flex flex-col items-center justify-center text-center p-4">
+          <div class="drop-zone relative border-2 border-dashed border-gray-300 rounded-lg h-32 flex flex-col items-center justify-center text-center p-4">
             <div id="file-name-display" class="text-sm text-gray-600 px-2 truncate max-w-full flex flex-col items-center gap-1">
               <svg width="28" height="28" viewBox="0 0 28 28" class="mb-1">
                 <circle cx="14" cy="14" r="13" fill="none" stroke="#9ca3af" stroke-width="1.5"></circle>
@@ -223,6 +266,19 @@
 
     <!-- Results grow inside the same card (skeleton until real data loads) -->
     <div id="results-card" class="border-t border-gray-100 p-8 opacity-40" style="transition: opacity 0.5s ease;">
+      <!-- Shown only when the posting was read from a pasted link -->
+      <div id="posting-source-card" class="hidden mb-8 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div class="min-w-0">
+            <p id="posting-source-label" class="font-semibold text-blue-900"></p>
+            <p id="posting-source-title" class="text-gray-900 mt-0.5 break-words"></p>
+            <p id="posting-source-meta" class="text-gray-600 mt-0.5"></p>
+          </div>
+          <a id="posting-source-link" href="#" target="_blank" rel="noopener noreferrer"
+            class="shrink-0 text-blue-700 underline font-medium"></a>
+        </div>
+        <p id="posting-source-hint" class="text-gray-600 mt-2"></p>
+      </div>
       <div class="flex flex-col md:flex-row items-center gap-8 mb-8 revealed" data-reveal>
         <svg width="140" height="140" viewBox="0 0 140 140" class="shrink-0">
           <circle cx="70" cy="70" r="60" fill="none" stroke="#e5e7eb" stroke-width="12"></circle>
@@ -304,6 +360,7 @@
         </section>
         <section class="bg-white border border-gray-200 rounded-xl p-4" id="radar-card">
           <h3 class="font-semibold mb-3" data-i18n="radarHeading"></h3>
+          <p id="radar-empty" class="hidden text-sm text-gray-400 italic" data-i18n="radarEmpty"></p>
           <div id="radar-container" class="relative mx-auto" style="width: 230px; height: 230px;">
             <svg viewBox="0 0 230 230" width="230" height="230">
               <g id="radar-rings"></g>
@@ -409,7 +466,7 @@
     </div>
   </div>
 
-  <footer class="max-w-xl mx-auto px-6 pb-16 text-center">
+  <footer class="max-w-xl mx-auto px-6 pb-16 text-center" data-scroll-reveal>
     <p class="text-xs text-gray-400" data-i18n="privacyNote"></p>
     <a href="https://buy.stripe.com/4gMcN7fle8HRbil8ru7N60a" target="_blank" rel="noopener noreferrer"
       class="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full border border-gray-200 text-sm text-gray-600 hover:border-gray-300 hover:text-gray-900 transition">

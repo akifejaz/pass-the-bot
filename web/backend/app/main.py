@@ -2,7 +2,10 @@
 
 One endpoint: POST /api/check. Accepts a resume file (PDF/DOCX) + posting
 text, extracts the resume text, runs the real matching engine, enriches the
-report with human-readable display names, and returns it as-is.
+report with human-readable display names, and returns it as-is. If the
+posting field holds a single link instead of text, the posting is fetched
+from that page first (app/fetch_posting.py) and the report gains a
+posting_source field describing where the text came from.
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ from passthebot.pipeline import PipelineInputError, run_pipeline
 
 from .enrichment import add_display_names
 from .extraction import ExtractionError, extract_text
+from .fetch_posting import PostingFetchError, fetch_posting, looks_like_url
 
 MAX_FILE_BYTES = 5 * 1024 * 1024  # 5MB, bounds memory/processing on a free public endpoint
 
@@ -40,6 +44,26 @@ EMBEDDER = Embedder()
 # the limit matches the machine's own concurrency headroom instead of
 # serializing every request through a single core.
 PIPELINE_CONCURRENCY = asyncio.Semaphore(2)
+
+_FETCH_ERROR_MESSAGES = {
+    "de": {
+        "unreadable": "Diese Seite konnten wir nicht auslesen (sie lädt die Anzeige erst im Browser). Bitte kopiere den Text der Stellenanzeige und füge ihn ein.",
+        "timeout": "Die Seite hat zu lange nicht geantwortet. Bitte füge den Text der Stellenanzeige direkt ein.",
+        "unsafe_url": "Dieser Link kann nicht geladen werden. Bitte füge einen öffentlichen Link zur Stellenanzeige oder ihren Text ein.",
+        "default": "Die Seite konnte nicht geladen werden. Bitte füge den Text der Stellenanzeige direkt ein.",
+    },
+    "en": {
+        "unreadable": "We couldn't read this page (it only loads the posting in the browser). Please copy the posting's text and paste it instead.",
+        "timeout": "The page took too long to respond. Please paste the posting's text instead.",
+        "unsafe_url": "This link can't be loaded. Please paste a public link to the posting, or its text.",
+        "default": "The page couldn't be loaded. Please paste the posting's text instead.",
+    },
+}
+
+
+def _fetch_error_message(code: str, lang: str) -> str:
+    messages = _FETCH_ERROR_MESSAGES.get(lang, _FETCH_ERROR_MESSAGES["en"])
+    return messages.get(code, messages["default"])
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,6 +92,17 @@ async def check(
     except ExtractionError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    posting_source = None
+    if looks_like_url(posting_text):
+        # Network I/O, deliberately outside PIPELINE_CONCURRENCY: a slow
+        # page must not hold one of the two embedding slots.
+        try:
+            posting_source = await run_in_threadpool(fetch_posting, posting_text)
+        except PostingFetchError as exc:
+            status = 504 if exc.code == "timeout" else 400
+            raise HTTPException(status_code=status, detail=_fetch_error_message(exc.code, lang)) from exc
+        posting_text = posting_source.text
+
     try:
         # Offload the CPU-bound embedding computation to a worker thread so
         # it doesn't block the event loop for the request's duration -- an
@@ -79,4 +114,7 @@ async def check(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     entries = active_entries(load_skill_graph(DEFAULT_DATA_DIR))
-    return add_display_names(report, entries, lang=lang)
+    report = add_display_names(report, entries, lang=lang)
+    if posting_source is not None:
+        report["posting_source"] = posting_source.to_dict()
+    return report
